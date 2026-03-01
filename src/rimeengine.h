@@ -8,6 +8,8 @@
 
 #include "rimesession.h"
 #include "rimestate.h"
+#include "rimevoicedef.h"
+#include "rimevoiceinputmanager.h"
 #include <cstdint>
 #include <fcitx-config/configuration.h>
 #include <fcitx-config/enum.h>
@@ -32,6 +34,7 @@
 #include <fcitx/inputcontextmanager.h>
 #include <fcitx/inputcontextproperty.h>
 #include <fcitx/inputmethodengine.h>
+#include <fcitx/inputmethodentry.h>
 #include <fcitx/instance.h>
 #include <fcitx/menu.h>
 #include <list>
@@ -111,7 +114,127 @@ FCITX_CONFIGURATION(
         isApple() ? fcitx::KeyList{fcitx::Key("Control+Alt+grave")}
                   : fcitx::KeyList{}};
     fcitx::Option<fcitx::KeyList> synchronize{
-        this, "Synchronize", _("Synchronize"), {}};);
+        this, "Synchronize", _("Synchronize"), {}};
+
+    // Voice Input Configuration
+    fcitx::Option<bool> enableVoiceInput{this, "EnableVoiceInput",
+                                         _("Enable Voice Input"), true};
+    fcitx::Option<fcitx::KeyList> voiceInputHotkey{
+        this, "VoiceInputHotkey", _("Voice Input Hotkey"),
+        fcitx::KeyList{fcitx::Key("F9")}};
+
+    fcitx::Option<fcitx::KeyList> voiceInputEditkey{
+        this, "VoiceInputEditkey", _("Voice Input Edit Key"),
+        fcitx::KeyList{fcitx::Key("F10")}};
+
+    OptionWithAnnotation<VoiceModifierKey, VoiceModifierKeyI18NAnnotation>
+        VoiceModifier_M1{this, "VoiceModifier_M1", _("Voice Modifier M1"),
+                         VoiceModifierKey::Shift};
+    OptionWithAnnotation<VoiceModifierKey, VoiceModifierKeyI18NAnnotation>
+        VoiceModifier_M2{this, "VoiceModifier_M2", _("Voice Modifier M2"),
+                         VoiceModifierKey::Ctrl};
+
+    Option<std::string> voiceCommandStart{
+        this, "voiceCommandStart", _("Voice Command Start"),
+        "voxtype record start --file /tmp/voxtype-result"};
+    Option<std::string> voiceCommandStop{
+        this, "voiceCommandStop", _("Voice Command Stop"),
+        "voxtype record stop --wait-till-idle"};
+    Option<std::string> voiceCommandCancel{this, "voiceCommandCancel",
+                                           _("Voice Command Cancel"),
+                                           "voxtype record cancel"};
+
+    Option<std::string> voiceCommandM1Start{
+        this, "voiceCommandM1Start", _("Voice Command M1 Start"),
+        "voxtype record start --file /tmp/voxtype-result "
+        "--complex-post-process"};
+    Option<std::string> voiceCommandM1Stop{
+        this, "voiceCommandM1Stop", _("Voice Command M1 Stop"),
+        "voxtype record stop --wait-till-idle"};
+    Option<std::string> voiceCommandM1Cancel{this, "voiceCommandM1Cancel",
+                                             _("Voice Command M1 Cancel"),
+                                             "voxtype record cancel"};
+
+    Option<std::string> voiceCommandM2Start{
+        this, "voiceCommandM2Start", _("Voice Command M2 Start"),
+        "voxtype record start --file /tmp/voxtype-result --model base.en"};
+    Option<std::string> voiceCommandM2Stop{
+        this, "voiceCommandM2Stop", _("Voice Command M2 Stop"),
+        "voxtype record stop --wait-till-idle"};
+    Option<std::string> voiceCommandM2Cancel{this, "voiceCommandM2Cancel",
+                                             _("Voice Command M2 Cancel"),
+                                             "voxtype record cancel"};
+
+    Option<std::string> voiceCommandM1M2Start{
+        this, "voiceCommandM1M2Start", _("Voice Command M1M2 Start"),
+        "voxtype record start --file /tmp/voxtype-result --model base.en "
+        "--complex-post-process"};
+    Option<std::string> voiceCommandM1M2Stop{
+        this, "voiceCommandM1M2Stop", _("Voice Command M1M2 Stop"),
+        "voxtype record stop --wait-till-idle"};
+    Option<std::string> voiceCommandM1M2Cancel{this, "voiceCommandM1M2Cancel",
+                                               _("Voice Command M1M2 Cancel"),
+                                               "voxtype record cancel"};
+
+    Option<std::string> voiceEditCommandStart{
+        this, "voiceEditCommandStart", _("Voice Edit Command Start"),
+        "voxtype record start --file /tmp/voxtype-result --edit "
+        "--edit-input-file /tmp/voxtype-edit-text"};
+    Option<std::string> voiceEditCommandStop{
+        this, "voiceEditCommandStop", _("Voice Edit Command Stop"),
+        "voxtype record stop --wait-till-idle"};
+    Option<std::string> voiceEditCommandCancel{this, "voiceEditCommandCancel",
+                                               _("Voice Edit Command Cancel"),
+                                               "voxtype record cancel"};
+
+    Option<std::string> voiceEditCommandM1Start{
+        this, "voiceEditCommandM1Start", _("Voice Edit Command M1 Start"),
+        "voxtype record start --file /tmp/voxtype-result "
+        "--complex-post-process --edit --edit-input-file "
+        "/tmp/voxtype-edit-text"};
+    Option<std::string> voiceEditCommandM1Stop{
+        this, "voiceEditCommandM1Stop", _("Voice Edit Command M1 Stop"),
+        "voxtype record stop --wait-till-idle"};
+    Option<std::string> voiceEditCommandM1Cancel{
+        this, "voiceEditCommandM1Cancel", _("Voice Edit Command M1 Cancel"),
+        "voxtype record cancel"};
+
+    Option<std::string> voiceEditCommandM2Start{
+        this, "voiceEditCommandM2Start", _("Voice Edit Command M2 Start"),
+        "voxtype record start --file /tmp/voxtype-result --model base.en "
+        "--edit --edit-input-file /tmp/voxtype-edit-text"};
+    Option<std::string> voiceEditCommandM2Stop{
+        this, "voiceEditCommandM2Stop", _("Voice Edit Command M2 Stop"),
+        "voxtype record stop --wait-till-idle"};
+    Option<std::string> voiceEditCommandM2Cancel{
+        this, "voiceEditCommandM2Cancel", _("Voice Edit Command M2 Cancel"),
+        "voxtype record cancel"};
+
+    Option<std::string> voiceEditCommandM1M2Start{
+        this, "voiceEditCommandM1M2Start", _("Voice Edit Command M1M2 Start"),
+        "voxtype record start --file /tmp/voxtype-result --model base.en "
+        "--complex-post-process --edit --edit-input-file "
+        "/tmp/voxtype-edit-text"};
+    Option<std::string> voiceEditCommandM1M2Stop{
+        this, "voiceEditCommandM1M2Stop", _("Voice Edit Command M1M2 Stop"),
+        "voxtype record stop --wait-till-idle"};
+    Option<std::string> voiceEditCommandM1M2Cancel{
+        this, "voiceEditCommandM1M2Cancel", _("Voice Edit Command M1M2 Cancel"),
+        "voxtype record cancel"};
+
+    Option<std::string> voiceResultPath{
+        this, "voiceResultPath", _("Voice Result Path"), "/tmp/voxtype-result"};
+    Option<std::string> voiceEditTextStorePath{this, "voiceEditTextStorePath",
+                                               _("Voice Edit Text Store Path"),
+                                               "/tmp/voxtype-edit-text"};
+    Option<std::string> voiceRecordingText{
+        this, "voiceRecordingText", _("Voice Recording Text"), "🎤 录音中..."};
+    Option<std::string> voiceEditRecordingText{this, "voiceEditRecordingText",
+                                               _("Voice Edit Recording Text"),
+                                               "✍🏻 语音编辑中..."};
+    Option<std::string> voiceProcessingText{this, "voiceProcessingText",
+                                            _("Voice Processing Text"),
+                                            "⏳ 处理中..."};);
 
 class RimeEngine final : public InputMethodEngineV2 {
 public:
@@ -162,6 +285,7 @@ public:
     void allowNotification(std::string type = "");
     const auto &schemas() const { return schemas_; }
     const auto &optionActions() const { return optionActions_; };
+    std::string getEditText(InputContext *ic);
 
 private:
     static void rimeNotificationHandler(void *context, RimeSessionId session,
@@ -183,6 +307,10 @@ private:
     void updateStatusArea(RimeSessionId session);
     void refreshSessionPoolPolicy();
     PropertyPropagatePolicy getSharedStatePolicy();
+    void resetRime(const InputMethodEntry &entry, InputContextEvent &event);
+    /// Return value: whether this key event is handled by voice input manager
+    bool handleVoiceInputManagerKeyEvent(const InputMethodEntry &entry,
+                                         KeyEvent &event);
 
     bool constructed_ = false;
     std::string sharedDataDir_;
@@ -207,6 +335,7 @@ private:
         appOptions_;
 
     FCITX_ADDON_DEPENDENCY_LOADER(notifications, instance_->addonManager());
+    FCITX_ADDON_DEPENDENCY_LOADER(clipboard, instance_->addonManager());
 
     std::unordered_set<std::string> schemas_;
     std::list<SimpleAction> schemActions_;
@@ -222,6 +351,7 @@ private:
     RimeSessionPool sessionPool_;
     std::thread::id mainThreadId_ = std::this_thread::get_id();
     RimeState *currentKeyEventState_ = nullptr;
+    VoiceInputManager voiceInputManager_;
 };
 } // namespace fcitx::rime
 

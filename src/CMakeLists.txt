@@ -5,6 +5,7 @@ set(RIME_SOURCES
     rimesession.cpp
     rimeaction.cpp
     rimefactory.cpp
+    rimevoiceinputmanager.cpp
 )
 
 set(RIME_LINK_LIBRARIES
@@ -12,6 +13,7 @@ set(RIME_LINK_LIBRARIES
     Fcitx5::Config
     ${RIME_TARGET}
     Fcitx5::Module::Notifications
+    Fcitx5::Module::Clipboard
     Pthread::Pthread
 )
 

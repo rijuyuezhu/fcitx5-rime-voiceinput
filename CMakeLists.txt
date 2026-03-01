@@ -13,7 +13,7 @@ include(ECMUninstallTarget)
 
 find_package(Gettext REQUIRED)
 find_package(Fcitx5Core ${REQUIRED_FCITX_VERSION} REQUIRED)
-find_package(Fcitx5Module REQUIRED COMPONENTS Notifications)
+find_package(Fcitx5Module REQUIRED COMPONENTS Notifications Clipboard)
 find_package(PkgConfig REQUIRED)
 find_package(Pthread REQUIRED)
 

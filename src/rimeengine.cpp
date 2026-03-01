@@ -5,9 +5,11 @@
  */
 
 #include "rimeengine.h"
+#include "clipboard_public.h"
 #include "notifications_public.h"
 #include "rimeaction.h"
 #include "rimestate.h"
+#include "rimevoiceinputmanager.h"
 #include <cstdint>
 #include <cstring>
 #include <ctime>
@@ -178,7 +180,7 @@ bool RimeEngine::firstRun_ = true;
 RimeEngine::RimeEngine(Instance *instance)
     : instance_(instance), api_(EnsureRimeApi()),
       factory_([this](InputContext &ic) { return new RimeState(this, ic); }),
-      sessionPool_(this, getSharedStatePolicy()) {
+      sessionPool_(this, getSharedStatePolicy()), voiceInputManager_(this) {
     if constexpr (isAndroid() || isApple()) {
         const auto &sp = StandardPaths::global();
         std::string defaultYaml =
@@ -346,6 +348,8 @@ void RimeEngine::updateConfig() {
     deployAction_.setHotkey(config_.deploy.value());
     syncAction_.setHotkey(config_.synchronize.value());
 
+    voiceInputManager_.loadConfig();
+
     if (constructed_) {
         refreshStatusArea(0);
     }
@@ -459,21 +463,20 @@ void RimeEngine::keyEvent(const InputMethodEntry &entry, KeyEvent &event) {
             return;
         }
     }
+    if (handleVoiceInputManagerKeyEvent(entry, event)) {
+        return;
+    }
     auto *state = this->state(inputContext);
     currentKeyEventState_ = state;
     state->keyEvent(event);
     currentKeyEventState_ = nullptr;
 }
 
-void RimeEngine::reset(const InputMethodEntry & /*entry*/,
+void RimeEngine::reset(const InputMethodEntry &entry,
                        InputContextEvent &event) {
-    auto *inputContext = event.inputContext();
-    auto *state = this->state(inputContext);
-    state->clear();
-    instance_->resetCompose(inputContext);
-    inputContext->inputPanel().reset();
-    inputContext->updatePreedit();
-    inputContext->updateUserInterface(UserInterfaceComponent::InputPanel);
+    InputContext *ic = event.inputContext();
+    voiceInputManager_.reset(ic);
+    resetRime(entry, event);
 }
 
 void RimeEngine::allowNotification(std::string type) {
@@ -735,6 +738,63 @@ PropertyPropagatePolicy RimeEngine::getSharedStatePolicy() {
     default:
         return instance_->globalConfig().shareInputState();
     }
+}
+void RimeEngine::resetRime(const InputMethodEntry & /*entry*/,
+                           InputContextEvent &event) {
+    auto *inputContext = event.inputContext();
+    auto *state = this->state(inputContext);
+    state->clear();
+    instance_->resetCompose(inputContext);
+    inputContext->inputPanel().reset();
+    inputContext->updatePreedit();
+    inputContext->updateUserInterface(UserInterfaceComponent::InputPanel);
+}
+
+bool RimeEngine::handleVoiceInputManagerKeyEvent(const InputMethodEntry &entry,
+                                                 KeyEvent &event) {
+    if (!config_.enableVoiceInput.value()) {
+        return false;
+    }
+    InputContext *ic = event.inputContext();
+    Key key_without_modifiers{event.key().sym()};
+    bool will_togger = !event.isRelease() && key_without_modifiers.checkKeyList(
+                                                 *config_.voiceInputHotkey);
+    bool will_edit_togger =
+        !will_togger && !event.isRelease() &&
+        key_without_modifiers.checkKeyList(*config_.voiceInputEditkey);
+    VoiceInputState state = voiceInputManager_.getState();
+    RIME_DEBUG() << "rime: Voice input manager state: "
+                 << static_cast<int>(state) << ", will toggle: " << will_togger
+                 << ", will edit toggle: " << will_edit_togger;
+    if (state == VoiceInputState::Idle && (will_togger || will_edit_togger)) {
+        resetRime(entry, event);
+    }
+    if (will_togger || will_edit_togger) {
+        voiceInputManager_.toggleRecording(ic, event, will_edit_togger);
+    }
+    if (will_togger || will_edit_togger) {
+        event.filterAndAccept();
+        return true;
+    } else if (state != VoiceInputState::Idle) {
+        return true;
+    } else {
+        return false;
+    }
+}
+
+std::string RimeEngine::getEditText(fcitx::InputContext *ic) {
+    auto *clipboard = this->clipboard();
+    if (!clipboard) {
+        return {};
+    }
+
+    std::string text = clipboard->call<fcitx::IClipboard::primary>(ic);
+
+    if (text.empty()) {
+        text = clipboard->call<fcitx::IClipboard::clipboard>(ic);
+    }
+
+    return text;
 }
 
 } // namespace fcitx::rime

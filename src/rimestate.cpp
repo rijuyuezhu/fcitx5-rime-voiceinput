@@ -618,4 +618,24 @@ void RimeState::showChangedOptions() {
         engine_->instance()->showCustomInputMethodInformation(&ic_, labels);
     }
 }
+
+void RimeState::commitVoiceText(const std::string &text) {
+    if (text.empty()) {
+        return;
+    }
+
+    auto *api = engine_->api();
+    if (!api || api->is_maintenance_mode()) {
+        return;
+    }
+
+    auto session = this->session();
+    if (!session) {
+        return;
+    }
+
+    ic_.commitString(text);
+
+    updateUI(&ic_, false);
+}
 } // namespace fcitx::rime

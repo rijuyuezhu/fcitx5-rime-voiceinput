@@ -56,6 +56,7 @@ public:
     std::string currentSchema();
     void addChangedOption(std::string_view option);
     void showChangedOptions();
+    void commitVoiceText(const std::string &text);
 
 private:
     void maybeSyncProgramNameToSession();
