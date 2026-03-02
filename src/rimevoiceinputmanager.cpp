@@ -40,8 +40,9 @@ void VoiceInputManager::loadConfig() {
     m1State_ = modifierKeyToState(configM1_);
     m2State_ = modifierKeyToState(configM2_);
     resultPath_ = config.voiceResultPath.value();
-    recordingText_ = config.voiceRecordingText.value();
     editTextStorePath_ = config.voiceEditTextStorePath.value();
+    recordingText_ = config.voiceRecordingText.value();
+    editRecordingText_ = config.voiceEditRecordingText.value();
     processingText_ = config.voiceProcessingText.value();
 }
 
