@@ -1,3 +1,7 @@
+**DEPRECATED: Please use <https://github.com/rijuyuezhu/fcitx5-voxtype-bridge>**
+
+---
+
 ## RIME support for Fcitx
 
 RIME(中州韻輸入法引擎) is _mainly_ a Traditional Chinese input method engine.
